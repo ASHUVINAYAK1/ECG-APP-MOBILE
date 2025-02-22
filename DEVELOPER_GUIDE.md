@@ -34,8 +34,6 @@ Before running the project, install all required dependencies:
 
 ### 3. Setup for Android Development
 Ensure you have:
-- **Android Studio installed**
-- **Java and Gradle configured**
 - **An emulator or physical device connected**
 
 Check available devices:
