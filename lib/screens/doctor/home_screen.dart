@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/app_scaffold.dart';
+import '../../widgets/doctor_scaffold.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,56 +15,63 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedIndex = index;
     });
-    // For now, use dummy navigation; add routes as needed.
     switch (index) {
       case 0:
         Navigator.pushReplacementNamed(context, '/doctor/home');
         break;
-      // Add additional cases for doctor-specific routes.
-      default:
+      case 1:
+        Navigator.pushReplacementNamed(context, '/doctor/profile');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/doctor/emergency');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/doctor/health');
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, '/doctor/chat');
+        break;
+      case 5:
+        Navigator.pushReplacementNamed(context, '/doctor/appointment');
+        break;
+      case 6:
+        Navigator.pushReplacementNamed(context, '/doctor/settings');
         break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
+    return DoctorScaffold(
       title: 'Doctor Home',
       currentIndex: _selectedIndex,
       onItemTapped: _onItemTapped,
-      bottomNavItems: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today),
-          label: "Appointments",
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
-      ],
-      drawer: Drawer(
-        child: ListView(
+      child: SingleChildScrollView(
+        child: Column(
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text(
-                'Doctor Menu',
-                style: TextStyle(color: Colors.white, fontSize: 24),
+            Container(
+              margin: const EdgeInsets.all(16),
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text(
+                  'Dashboard Analytics Placeholder',
+                  style: TextStyle(fontSize: 18),
+                ),
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Profile'),
-              onTap: () {},
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Welcome, Dr. Smith!',
+                style: const TextStyle(fontSize: 20),
+              ),
             ),
-            // Add more doctor-specific menu items here.
+            // Additional dashboard widgets can be added here.
           ],
-        ),
-      ),
-      child: Center(
-        child: const Text(
-          'This is the Doctor Home Screen',
-          style: TextStyle(fontSize: 24),
         ),
       ),
     );
