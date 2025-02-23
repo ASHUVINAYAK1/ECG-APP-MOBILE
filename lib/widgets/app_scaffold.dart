@@ -23,7 +23,7 @@ class AppScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar with menu button at the left and profile picture at the right.
+      // Top AppBar: menu button (left) and profile picture (right)
       appBar: AppBar(
         title: Text(title),
         leading: Builder(
@@ -31,6 +31,7 @@ class AppScaffold extends StatelessWidget {
               (context) => IconButton(
                 icon: const Icon(Icons.menu),
                 onPressed: () {
+                  // Opens the left-side drawer.
                   Scaffold.of(context).openDrawer();
                 },
               ),
@@ -42,10 +43,13 @@ class AppScaffold extends StatelessWidget {
           ),
         ],
       ),
+      // Drawer is passed in (it can be patient- or doctor-specific)
       drawer: drawer,
+      // Main content.
       body: child,
+      // Bottom Navigation Bar with a dark background and white icons.
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.black, // Dark background
+        backgroundColor: Colors.black,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.black,
         currentIndex: currentIndex,
