@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../controllers/auth_controller.dart';
 
 enum UserRole { patient, doctor }
 
@@ -12,31 +14,35 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController =
+      TextEditingController(); // using email
   final TextEditingController _passwordController = TextEditingController();
+  final AuthController _authController = AuthController();
 
   UserRole _selectedRole = UserRole.patient;
 
-  void _login() {
-    final username = _usernameController.text.trim();
+  void _login() async {
+    final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (_selectedRole == UserRole.patient) {
-      if (username == 'patient' && password == 'patient') {
-        Navigator.pushReplacementNamed(context, '/patient/home');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid patient credentials')),
-        );
+    try {
+      final user = await _authController.signIn(
+        email: email,
+        password: password,
+      );
+      if (user != null) {
+        // After login, you might want to fetch the user’s role from Firestore
+        // For simplicity, we use the selected role here.
+        if (_selectedRole == UserRole.patient) {
+          Navigator.pushReplacementNamed(context, '/patient/home');
+        } else {
+          Navigator.pushReplacementNamed(context, '/doctor/home');
+        }
       }
-    } else if (_selectedRole == UserRole.doctor) {
-      if (username == 'doctor' && password == 'doctor') {
-        Navigator.pushReplacementNamed(context, '/doctor/home');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid doctor credentials')),
-        );
-      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Login error')));
     }
   }
 
@@ -101,16 +107,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
-                        controller: _usernameController,
+                        controller: _emailController,
                         decoration: const InputDecoration(
-                          labelText: 'Username',
-                          prefixIcon: Icon(Icons.person),
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email),
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Enter your username';
+                            return 'Enter your email';
                           }
+                          // Add basic email validation if needed.
                           return null;
                         },
                       ),
@@ -122,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: Icon(Icons.lock),
                           border: OutlineInputBorder(),
                         ),
-                        obscureText: true,
+                        obscureText: true, // hides the password
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Enter your password';
@@ -144,6 +151,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Login',
                           style: TextStyle(fontSize: 18),
                         ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/auth/register');
+                        },
+                        child: const Text("Don't have an account? Register"),
                       ),
                     ],
                   ),
