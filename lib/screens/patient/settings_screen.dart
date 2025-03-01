@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
+import '../../controllers/auth_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  void _logout(BuildContext context) async {
+    final AuthController authController = AuthController();
+    await authController.signOut();
+    // Navigate back to login screen and remove all routes.
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/auth/login', // Ensure this route exists for your login screen.
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +69,8 @@ class SettingsScreen extends StatelessWidget {
                   size: 16,
                   color: Colors.grey[600],
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
                 onTap: () {
+                  // Implement change password functionality.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Change Password tapped')),
                   );
@@ -109,11 +118,8 @@ class SettingsScreen extends StatelessWidget {
                   size: 16,
                   color: Colors.grey[600],
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
                 onTap: () {
+                  // Implement notifications settings.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Notifications tapped')),
                   );
@@ -148,11 +154,8 @@ class SettingsScreen extends StatelessWidget {
                   size: 16,
                   color: Colors.grey[600],
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
                 onTap: () {
+                  // Implement privacy settings.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Privacy tapped')),
                   );
@@ -163,13 +166,7 @@ class SettingsScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: OutlinedButton(
-                onPressed: () {
-                  // This button has no functionality in original code
-                  // Just adding it for UI improvement
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Logout tapped')),
-                  );
-                },
+                onPressed: () => _logout(context),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   side: BorderSide(color: Colors.red[300]!),
