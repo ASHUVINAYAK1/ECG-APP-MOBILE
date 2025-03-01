@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import '../../controllers/auth_controller.dart';
-import '../../enums/user_role.dart'; // Import the shared enum
+import '../../enums/user_role.dart'; // Use this definition for UserRole
+import '../../models/user_model.dart' hide UserRole; // Hide duplicate UserRole
+import '../patient/onboarding_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -21,7 +24,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final AuthController _authController = AuthController();
   UserRole _selectedRole = UserRole.patient;
 
-  void _register() async {
+  Future<void> _register() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(
         context,
@@ -38,8 +41,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       if (user != null) {
         if (_selectedRole == UserRole.patient) {
-          Navigator.pushReplacementNamed(context, '/patient/home');
+          // Automatically fetch the full user record and navigate to onboarding.
+          final doc =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
+          final appUser = AppUser.fromMap(
+            doc.data() as Map<String, dynamic>,
+            user.uid,
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OnboardingScreen(user: appUser),
+            ),
+          );
         } else {
+          // For doctors, navigate directly to their home screen.
           Navigator.pushReplacementNamed(context, '/doctor/home');
         }
       }
@@ -74,9 +93,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Enter your email';
-                  }
+                  if (value == null || value.isEmpty) return 'Enter your email';
                   return null;
                 },
               ),
@@ -90,12 +107,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.isEmpty)
                     return 'Enter your password';
-                  }
-                  if (value.length < 6) {
+                  if (value.length < 6)
                     return 'Password must be at least 6 characters';
-                  }
                   return null;
                 },
               ),
@@ -109,9 +124,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.isEmpty)
                     return 'Confirm your password';
-                  }
                   return null;
                 },
               ),
@@ -123,9 +137,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     value: UserRole.patient,
                     groupValue: _selectedRole,
                     onChanged: (UserRole? value) {
-                      setState(() {
-                        _selectedRole = value!;
-                      });
+                      setState(() => _selectedRole = value!);
                     },
                   ),
                   const Text('Patient'),
@@ -133,9 +145,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     value: UserRole.doctor,
                     groupValue: _selectedRole,
                     onChanged: (UserRole? value) {
-                      setState(() {
-                        _selectedRole = value!;
-                      });
+                      setState(() => _selectedRole = value!);
                     },
                   ),
                   const Text('Doctor'),
@@ -144,9 +154,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _register();
-                  }
+                  if (_formKey.currentState!.validate()) _register();
                 },
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),

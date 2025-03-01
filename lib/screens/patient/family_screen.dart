@@ -1,3 +1,6 @@
+// lib/screens/patient/family_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class FamilyScreen extends StatefulWidget {
@@ -8,7 +11,37 @@ class FamilyScreen extends StatefulWidget {
 }
 
 class _FamilyScreenState extends State<FamilyScreen> {
-  final List<String> _familyMembers = ["Alice", "Bob", "Charlie"];
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String? familyDoctor = "Not Selected";
+  List<String> familyMembers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFamilyData();
+  }
+
+  Future<void> _loadFamilyData() async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+    // Get the user's document.
+    final userDoc =
+        await _firestore.collection('users').doc(currentUser.uid).get();
+    final familyId = userDoc.data()?['familyId'];
+    if (familyId != null) {
+      final familyDoc =
+          await _firestore.collection('families').doc(familyId).get();
+      if (familyDoc.exists) {
+        setState(() {
+          familyDoctor = familyDoc.data()?['familyDoctorId'] ?? "Not Selected";
+          familyMembers = List<String>.from(
+            familyDoc.data()?['memberIds'] ?? [],
+          );
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,18 +70,18 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           "Family Doctor",
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey[600],
+                            color: Colors.grey,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          "Not Selected",
-                          style: TextStyle(
+                        Text(
+                          familyDoctor!,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -57,6 +90,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     ),
                     ElevatedButton.icon(
                       onPressed: () {
+                        // Implement choose family doctor functionality.
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Choose Family Doctor tapped'),
@@ -105,7 +139,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    "${_familyMembers.length} members",
+                    "${familyMembers.length} members",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -116,63 +150,67 @@ class _FamilyScreenState extends State<FamilyScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: ListView.builder(
-                itemCount: _familyMembers.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    elevation: 1,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            Colors.primaries[index % Colors.primaries.length],
-                        radius: 24,
-                        child: Text(
-                          _familyMembers[index][0],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        _familyMembers[index],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      subtitle: const Text("Family Member"),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.more_vert),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${_familyMembers[index]} options tapped',
+              child:
+                  familyMembers.isEmpty
+                      ? const Center(child: Text("No family members found"))
+                      : ListView.builder(
+                        itemCount: familyMembers.length,
+                        itemBuilder: (context, index) {
+                          final member = familyMembers[index];
+                          return Card(
+                            elevation: 1,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    Colors.primaries[index %
+                                        Colors.primaries.length],
+                                radius: 24,
+                                child: Text(
+                                  member[0],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                member,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              subtitle: const Text("Family Member"),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.more_vert),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('$member options tapped'),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           );
                         },
                       ),
-                    ),
-                  );
-                },
-              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  // Implement add family member functionality.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Add Family Member tapped')),
                   );

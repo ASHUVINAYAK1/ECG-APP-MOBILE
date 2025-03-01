@@ -1,3 +1,5 @@
+// lib/screens/patient/home_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/app_scaffold.dart';
 
@@ -12,14 +14,29 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String diagnosis = "Processing...";
 
+  // Assume current patient's UID; in a real app, get from FirebaseAuth.
+  final String patientId = "CURRENT_PATIENT_UID";
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        diagnosis = "Normal"; // This would come from your ECG/AI processing.
-      });
-    });
+    // Listen to sensor readings and update diagnosis dynamically.
+    FirebaseFirestore.instance
+        .collection('sensor_readings')
+        .where('patientId', isEqualTo: patientId)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+          if (snapshot.docs.isNotEmpty) {
+            // Process the latest sensor reading. For example, if readingValue exceeds a threshold.
+            final data = snapshot.docs.first.data() as Map<String, dynamic>;
+            final reading = (data['readingValue'] as num?)?.toDouble() ?? 0.0;
+            setState(() {
+              diagnosis = reading < 1.0 ? "Normal" : "Abnormal";
+            });
+          }
+        });
   }
 
   void _onItemTapped(int index) {
@@ -80,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
-                child: CircleAvatar(
+                child: const CircleAvatar(
                   backgroundImage: NetworkImage(
                     "https://via.placeholder.com/150",
                   ),
@@ -114,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'Chat',
               onTap: () => Navigator.pushNamed(context, '/patient/chat'),
             ),
-            Divider(),
+            const Divider(),
             _buildDrawerItem(
               icon: Icons.settings,
               title: 'Settings',
@@ -182,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  const Center(
+                  Center(
                     child: Text(
                       'ECG Graph Placeholder',
                       style: TextStyle(
