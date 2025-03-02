@@ -1,5 +1,5 @@
-// lib/screens/patient/health_prescription_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class HealthPrescriptionScreen extends StatelessWidget {
@@ -7,15 +7,13 @@ class HealthPrescriptionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Replace 'patientId' with the actual current user ID.
-    final String patientId = "CURRENT_PATIENT_UID";
+    // Get current user UID dynamically.
+    final String patientId = FirebaseAuth.instance.currentUser?.uid ?? "";
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Health & Prescription'),
-        elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
@@ -55,8 +53,9 @@ class HealthPrescriptionScreen extends StatelessWidget {
             child: StreamBuilder<QuerySnapshot>(
               stream:
                   FirebaseFirestore.instance
+                      .collection('patients')
+                      .doc(patientId)
                       .collection('medical_records')
-                      .where('patientId', isEqualTo: patientId)
                       .orderBy('date', descending: true)
                       .snapshots(),
               builder: (context, snapshot) {
@@ -66,7 +65,7 @@ class HealthPrescriptionScreen extends StatelessWidget {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final docs = snapshot.data!.docs;
+                final docs = snapshot.data?.docs ?? [];
                 if (docs.isEmpty) {
                   return const Center(child: Text("No records found"));
                 }
@@ -75,8 +74,9 @@ class HealthPrescriptionScreen extends StatelessWidget {
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final data = docs[index].data() as Map<String, dynamic>;
+                    final Timestamp? timestamp = data['date'] as Timestamp?;
                     final DateTime recordDate =
-                        (data['date'] as Timestamp).toDate();
+                        timestamp?.toDate() ?? DateTime.now();
                     final String formattedDate =
                         "${recordDate.day}/${recordDate.month}/${recordDate.year}";
                     return Card(
@@ -249,9 +249,8 @@ class HealthPrescriptionScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add new record tapped')),
-          );
+          // Navigate to a new screen for adding a medical record.
+          Navigator.pushNamed(context, '/patient/add_medical_record');
         },
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add),

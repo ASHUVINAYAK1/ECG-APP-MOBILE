@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Needed to fetch user role
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/auth_controller.dart';
 import '../../enums/user_role.dart';
+// Hide the UserRole from user_model.dart to avoid conflicts.
+import '../../models/user_model.dart' hide UserRole;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final AuthController _authController = AuthController();
 
-  // The role selected by the user at login.
+  // Role selected by the user at login.
   UserRole _selectedRole = UserRole.patient;
 
   Future<void> _login() async {
@@ -27,33 +29,38 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     try {
-      // Attempt sign-in via Firebase Auth.
-      final user = await _authController.signIn(
+      // Sign in using AuthController.
+      final User? firebaseUser = await _authController.signIn(
         email: email,
         password: password,
       );
+
       if (!mounted) return;
-      if (user != null) {
-        // Fetch the stored user role from Firestore.
+
+      if (firebaseUser != null) {
+        // Fetch the user's Firestore document. Adjust the collection name if necessary.
         DocumentSnapshot userDoc =
             await FirebaseFirestore.instance
                 .collection('users')
-                .doc(user.uid)
+                .doc(firebaseUser.uid)
                 .get();
+
         if (!userDoc.exists) {
-          // If no user record exists, sign out and show an error.
+          // No document found – sign out and show error.
           await _authController.signOut();
           _showErrorDialog("User record not found. Please contact support.");
           return;
         }
-        // Get the role as a string from the document.
+
+        // Extract stored role.
         final String? registeredRole = userDoc.get('role') as String?;
         if (registeredRole == null) {
           await _authController.signOut();
           _showErrorDialog("User role not found. Please contact support.");
           return;
         }
-        // Check if the stored role matches the role selected during login.
+
+        // Check that the stored role matches the role selected at login.
         if (_selectedRole == UserRole.patient && registeredRole != "patient") {
           await _authController.signOut();
           _showErrorDialog(
@@ -69,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
 
-        // If roles match, show a success dialog and then navigate.
+        // If everything is OK, show a success dialog then navigate.
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -80,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 actions: [
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pop(); // close the dialog
+                      Navigator.of(context).pop(); // Close dialog
                       if (_selectedRole == UserRole.patient) {
                         Navigator.pushReplacementNamed(
                           context,
@@ -111,9 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
             content: Text(message),
             actions: [
               TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // close the dialog
-                },
+                onPressed: () => Navigator.of(context).pop(), // Close dialog
                 child: const Text('OK'),
               ),
             ],
@@ -188,12 +193,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: Icon(Icons.email),
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Enter your email';
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) =>
+                                value == null || value.isEmpty
+                                    ? 'Enter your email'
+                                    : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -204,12 +208,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           border: OutlineInputBorder(),
                         ),
                         obscureText: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Enter your password';
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) =>
+                                value == null || value.isEmpty
+                                    ? 'Enter your password'
+                                    : null,
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
@@ -227,9 +230,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/auth/register');
-                        },
+                        onPressed:
+                            () =>
+                                Navigator.pushNamed(context, '/auth/register'),
                         child: const Text("Don't have an account? Register"),
                       ),
                     ],

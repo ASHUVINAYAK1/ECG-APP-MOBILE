@@ -1,10 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/auth_controller.dart';
-import '../../enums/user_role.dart'; // Use this definition for UserRole
-import '../../models/user_model.dart' hide UserRole; // Hide duplicate UserRole
-import '../patient/onboarding_screen.dart';
+import 'package:ecg_app/enums/user_role.dart'; // Use this definition for UserRole.
+import 'package:ecg_app/models/user_model.dart'
+    hide UserRole; // Hide duplicate UserRole.
+import 'package:ecg_app/screens/patient/onboarding_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -33,33 +34,78 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
 
     try {
-      final user = await _authController.register(
+      // Attempt to register the user.
+      final User? firebaseUser = await _authController.register(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
         role: _selectedRole,
       );
 
-      if (user != null) {
-        if (_selectedRole == UserRole.patient) {
-          // Automatically fetch the full user record and navigate to onboarding.
-          final doc =
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .get();
-          final appUser = AppUser.fromMap(
-            doc.data() as Map<String, dynamic>,
-            user.uid,
-          );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OnboardingScreen(user: appUser),
-            ),
-          );
+      if (firebaseUser != null) {
+        // Determine the collection based on the role.
+        final String collectionName =
+            _selectedRole == UserRole.patient ? 'patients' : 'doctors';
+
+        final DocumentReference docRef = FirebaseFirestore.instance
+            .collection(collectionName)
+            .doc(firebaseUser.uid);
+
+        final DocumentSnapshot doc = await docRef.get();
+
+        if (!doc.exists) {
+          // Create a minimal record if one does not exist.
+          if (_selectedRole == UserRole.patient) {
+            // Create a minimal patient record.
+            final Patient newPatient = Patient(
+              uid: firebaseUser.uid,
+              email: _emailController.text.trim(),
+              role: UserRole.patient,
+              name: "",
+              phone: "",
+              address: "",
+              familyId: null,
+              emergencyDoctorIds: [],
+            );
+            await docRef.set(newPatient.toMap());
+            final DocumentSnapshot newDoc = await docRef.get();
+            final Patient patient = Patient.fromMap(
+              newDoc.data() as Map<String, dynamic>,
+              firebaseUser.uid,
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OnboardingScreen(patient: patient),
+              ),
+            );
+          } else {
+            // Create a minimal doctor record.
+            final Doctor newDoctor = Doctor(
+              uid: firebaseUser.uid,
+              email: _emailController.text.trim(),
+              role: UserRole.doctor,
+              name: "",
+              specialization: "",
+            );
+            await docRef.set(newDoctor.toMap());
+            Navigator.pushReplacementNamed(context, '/doctor/home');
+          }
         } else {
-          // For doctors, navigate directly to their home screen.
-          Navigator.pushReplacementNamed(context, '/doctor/home');
+          // If record already exists, navigate accordingly.
+          if (_selectedRole == UserRole.patient) {
+            final Patient patient = Patient.fromMap(
+              doc.data() as Map<String, dynamic>,
+              firebaseUser.uid,
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OnboardingScreen(patient: patient),
+              ),
+            );
+          } else {
+            Navigator.pushReplacementNamed(context, '/doctor/home');
+          }
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -92,10 +138,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   prefixIcon: Icon(Icons.email),
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Enter your email';
-                  return null;
-                },
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? 'Enter your email'
+                            : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -123,11 +170,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return 'Confirm your password';
-                  return null;
-                },
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? 'Confirm your password'
+                            : null,
               ),
               const SizedBox(height: 16),
               Row(
@@ -154,7 +201,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  if (_formKey.currentState!.validate()) _register();
+                  if (_formKey.currentState!.validate()) {
+                    _register();
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),

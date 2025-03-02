@@ -1,18 +1,115 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../controllers/auth_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  Future<void> _changePassword(BuildContext context) async {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final _formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Change Password"),
+            content: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: currentPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: "Current Password",
+                      ),
+                      obscureText: true,
+                      validator:
+                          (value) =>
+                              value == null || value.isEmpty
+                                  ? "Enter current password"
+                                  : null,
+                    ),
+                    TextFormField(
+                      controller: newPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: "New Password",
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty)
+                          return "Enter new password";
+                        if (value.length < 6)
+                          return "Password must be at least 6 characters";
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: confirmPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: "Confirm New Password",
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty)
+                          return "Confirm new password";
+                        if (value != newPasswordController.text)
+                          return "Passwords do not match";
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null && user.email != null) {
+                      try {
+                        final credential = EmailAuthProvider.credential(
+                          email: user.email!,
+                          password: currentPasswordController.text.trim(),
+                        );
+                        await user.reauthenticateWithCredential(credential);
+                        await user.updatePassword(
+                          newPasswordController.text.trim(),
+                        );
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Password changed successfully"),
+                          ),
+                        );
+                      } catch (e) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Error: ${e.toString()}")),
+                        );
+                      }
+                    }
+                  }
+                },
+                child: const Text("Update"),
+              ),
+            ],
+          ),
+    );
+  }
+
   void _logout(BuildContext context) async {
     final AuthController authController = AuthController();
     await authController.signOut();
-    // Navigate back to login screen and remove all routes.
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/auth/login', // Ensure this route exists for your login screen.
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/auth/login', (route) => false);
   }
 
   @override
@@ -69,12 +166,7 @@ class SettingsScreen extends StatelessWidget {
                   size: 16,
                   color: Colors.grey[600],
                 ),
-                onTap: () {
-                  // Implement change password functionality.
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Change Password tapped')),
-                  );
-                },
+                onTap: () => _changePassword(context),
               ),
             ),
             const SizedBox(height: 16),
@@ -119,7 +211,6 @@ class SettingsScreen extends StatelessWidget {
                   color: Colors.grey[600],
                 ),
                 onTap: () {
-                  // Implement notifications settings.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Notifications tapped')),
                   );
@@ -155,7 +246,6 @@ class SettingsScreen extends StatelessWidget {
                   color: Colors.grey[600],
                 ),
                 onTap: () {
-                  // Implement privacy settings.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Privacy tapped')),
                   );

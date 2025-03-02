@@ -1,11 +1,10 @@
-// lib/screens/patient/home_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/app_scaffold.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -13,14 +12,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String diagnosis = "Processing...";
+  String userName = "Patient";
 
-  // Assume current patient's UID; in a real app, get from FirebaseAuth.
-  final String patientId = "CURRENT_PATIENT_UID";
+  final String patientId =
+      FirebaseAuth.instance.currentUser?.uid ?? "CURRENT_PATIENT_UID";
 
   @override
   void initState() {
     super.initState();
-    // Listen to sensor readings and update diagnosis dynamically.
     FirebaseFirestore.instance
         .collection('sensor_readings')
         .where('patientId', isEqualTo: patientId)
@@ -29,7 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
         .snapshots()
         .listen((snapshot) {
           if (snapshot.docs.isNotEmpty) {
-            // Process the latest sensor reading. For example, if readingValue exceeds a threshold.
             final data = snapshot.docs.first.data() as Map<String, dynamic>;
             final reading = (data['readingValue'] as num?)?.toDouble() ?? 0.0;
             setState(() {
@@ -37,13 +35,23 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           }
         });
+    // Load patient's name from the "patients" collection.
+    FirebaseFirestore.instance.collection('patients').doc(patientId).get().then(
+      (doc) {
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          setState(() {
+            userName = data['name'] ?? "Patient";
+          });
+        }
+      },
+    );
   }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    // Navigate based on the selected index.
     switch (index) {
       case 0:
         Navigator.pushReplacementNamed(context, '/patient/home');
@@ -84,9 +92,12 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              accountName: const Text(
-                "Patient Name",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              accountName: Text(
+                userName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
               accountEmail: const Text(
                 "patient@test.com",
@@ -150,9 +161,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Your Heart Activity',
-              style: TextStyle(
+            Text(
+              'Welcome, $userName',
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.blue,
