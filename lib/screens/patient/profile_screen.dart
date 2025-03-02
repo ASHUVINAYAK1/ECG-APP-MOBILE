@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../controllers/profile_controller.dart';
-import '../../models/user_model.dart';
+import '../../models/user_model.dart'; // Contains AppUser and Patient classes
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,11 +17,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ProfileController _profileController = ProfileController();
+  final ImagePicker _imagePicker = ImagePicker();
 
-  late Future<AppUser> _userFuture;
+  late Future<Patient> _userFuture;
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _familyNameController = TextEditingController();
-  final TextEditingController _familyDoctorController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+
+  File? _profileImage;
 
   @override
   void initState() {
@@ -27,18 +32,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _userFuture = _loadUser();
   }
 
-  Future<AppUser> _loadUser() async {
+  Future<Patient> _loadUser() async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("User not logged in");
-    final doc = await _firestore.collection('users').doc(user.uid).get();
-    return AppUser.fromMap(doc.data() as Map<String, dynamic>, user.uid);
+    final doc = await _firestore.collection('patients').doc(user.uid).get();
+    if (doc.exists) {
+      return Patient.fromMap(doc.data() as Map<String, dynamic>, user.uid);
+    }
+    throw Exception("Patient data not found");
   }
 
-  void _updateProfile(AppUser appUser) async {
+  Future<void> _pickProfileImage() async {
+    final XFile? picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+    );
+    if (picked != null) {
+      setState(() {
+        _profileImage = File(picked.path);
+      });
+    }
+  }
+
+  Future<void> _updateProfile(Patient patient) async {
     await _profileController.updateProfile(
-      uid: appUser.uid,
+      uid: patient.uid,
       name: _nameController.text.trim(),
-      // Add additional fields as needed.
+      phone: _phoneController.text.trim(),
+      address: _addressController.text.trim(),
+      profileImage: _profileImage,
     );
     ScaffoldMessenger.of(
       context,
@@ -53,11 +74,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
       ),
-      body: FutureBuilder<AppUser>(
+      body: FutureBuilder<Patient>(
         future: _userFuture,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -66,55 +85,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final appUser = snapshot.data!;
-          _nameController.text = appUser.name ?? "";
-          // Set other controllers similarly if data exists.
+          final patient = snapshot.data!;
+          _nameController.text = patient.name ?? "";
+          _phoneController.text = patient.phone ?? "";
+          _addressController.text = patient.address ?? "";
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Profile image and upload button (if implemented)
                 Center(
                   child: Stack(
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 3,
-                          ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 65,
-                          backgroundColor: Colors.grey[200],
-                          backgroundImage:
-                              appUser.profileImageUrl != null
-                                  ? NetworkImage(appUser.profileImageUrl!)
-                                  : null,
-                          child:
-                              appUser.profileImageUrl == null
-                                  ? const Icon(
-                                    Icons.person,
-                                    size: 65,
-                                    color: Colors.grey,
-                                  )
-                                  : null,
-                        ),
+                      CircleAvatar(
+                        radius: 65,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage:
+                            _profileImage != null
+                                ? FileImage(_profileImage!)
+                                : (patient.profileImageUrl != null
+                                        ? NetworkImage(patient.profileImageUrl!)
+                                        : null)
+                                    as ImageProvider?,
+                        child:
+                            _profileImage == null &&
+                                    patient.profileImageUrl == null
+                                ? const Icon(
+                                  Icons.person,
+                                  size: 65,
+                                  color: Colors.grey,
+                                )
+                                : null,
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
                         child: GestureDetector(
-                          onTap: () {
-                            // Implement image upload functionality.
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Upload image tapped'),
-                              ),
-                            );
-                          },
+                          onTap: _pickProfileImage,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -141,48 +147,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Personal Information',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
                         TextField(
                           controller: _nameController,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Name',
-                            prefixIcon: const Icon(Icons.person_outline),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            prefixIcon: Icon(Icons.person_outline),
+                            border: OutlineInputBorder(),
                           ),
                         ),
                         const SizedBox(height: 16),
                         TextField(
-                          controller: _familyNameController,
-                          decoration: InputDecoration(
-                            labelText: 'Family Name',
-                            prefixIcon: const Icon(Icons.family_restroom),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                          controller: _phoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Phone Number',
+                            prefixIcon: Icon(Icons.phone),
+                            border: OutlineInputBorder(),
                           ),
                         ),
                         const SizedBox(height: 16),
                         TextField(
-                          controller: _familyDoctorController,
-                          decoration: InputDecoration(
-                            labelText: 'Family Doctor Name',
-                            prefixIcon: const Icon(Icons.local_hospital),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                          controller: _addressController,
+                          decoration: const InputDecoration(
+                            labelText: 'Address',
+                            prefixIcon: Icon(Icons.home),
+                            border: OutlineInputBorder(),
                           ),
                         ),
                       ],
@@ -191,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
-                  onPressed: () => _updateProfile(appUser),
+                  onPressed: () => _updateProfile(patient),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                   ),

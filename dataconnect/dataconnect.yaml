@@ -1,0 +1,12 @@
+specVersion: "v1beta"
+serviceId: "ECG-APP-BASE"
+location: "asia-east1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "ecg-app-base-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

@@ -7,28 +7,77 @@ class ProfileController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Update user's name and profile image URL in Firestore.
+  /// Update the patient profile in the 'patients' collection.
   Future<void> updateProfile({
     required String uid,
-    String? name,
-    File? profileImage, // new image file if any
+    required String name,
+    required String phone,
+    required String address,
+    File? profileImage,
   }) async {
-    Map<String, dynamic> updateData = {};
-
-    if (name != null) {
-      updateData['name'] = name;
-    }
-
+    String? profileImageUrl;
     if (profileImage != null) {
-      // Upload image to Firebase Storage.
-      final ref = _storage.ref().child('profile_images').child('$uid.jpg');
+      // Upload the image to Firebase Storage.
+      final ref = _storage.ref().child('profile_images').child(uid);
       await ref.putFile(profileImage);
-      final url = await ref.getDownloadURL();
-      updateData['profileImageUrl'] = url;
+      profileImageUrl = await ref.getDownloadURL();
     }
 
-    if (updateData.isNotEmpty) {
-      await _firestore.collection('users').doc(uid).update(updateData);
+    // Update patient document.
+    await _firestore.collection('patients').doc(uid).set({
+      'name': name,
+      'phone': phone,
+      'address': address,
+      if (profileImageUrl != null) 'profileImageUrl': profileImageUrl,
+    }, SetOptions(merge: true));
+  }
+
+  /// Add or update a medical record in a subcollection "medical_records" under patient document.
+  Future<void> addMedicalRecord({
+    required String uid,
+    required String prescription,
+    required String ecg,
+    File? documentFile,
+  }) async {
+    String? documentUrl;
+    if (documentFile != null) {
+      // Upload the file (e.g., PDF or image) to Firebase Storage.
+      final ref = _storage
+          .ref()
+          .child('medical_records')
+          .child(uid)
+          .child(DateTime.now().millisecondsSinceEpoch.toString());
+      await ref.putFile(documentFile);
+      documentUrl = await ref.getDownloadURL();
     }
+    // Create a new document in the "medical_records" subcollection for the patient.
+    await _firestore
+        .collection('patients')
+        .doc(uid)
+        .collection('medical_records')
+        .add({
+          'prescription': prescription,
+          'ecg': ecg,
+          'documentUrl': documentUrl,
+          'date': FieldValue.serverTimestamp(),
+        });
+  }
+
+  /// Update medical record URL separately if needed.
+  Future<void> updateMedicalRecord({
+    required String uid,
+    required String medicalRecordUrl,
+  }) async {
+    // You can choose to store multiple records in a subcollection (recommended)
+    // or update an array field in the patient document.
+    // Here we assume a subcollection approach.
+    await _firestore
+        .collection('patients')
+        .doc(uid)
+        .collection('medical_records')
+        .add({
+          'documentUrl': medicalRecordUrl,
+          'date': FieldValue.serverTimestamp(),
+        });
   }
 }
