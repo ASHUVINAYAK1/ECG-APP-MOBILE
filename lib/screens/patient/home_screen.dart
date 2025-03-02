@@ -13,6 +13,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String diagnosis = "Processing...";
   String userName = "Patient";
+  String userEmail = "patient@test.com"; // Default email
+  String profileImageUrl =
+      "https://via.placeholder.com/150"; // Default profile image
 
   final String patientId =
       FirebaseAuth.instance.currentUser?.uid ?? "CURRENT_PATIENT_UID";
@@ -20,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchPatientData(); // Fetch dynamic name, email, and profile image
     FirebaseFirestore.instance
         .collection('sensor_readings')
         .where('patientId', isEqualTo: patientId)
@@ -35,13 +39,19 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           }
         });
-    // Load patient's name from the "patients" collection.
+  }
+
+  /// Fetches patient's name, email, and profile picture from Firestore
+  void _fetchPatientData() {
     FirebaseFirestore.instance.collection('patients').doc(patientId).get().then(
       (doc) {
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
           setState(() {
             userName = data['name'] ?? "Patient";
+            userEmail = data['email'] ?? "No Email";
+            profileImageUrl =
+                data['profileImageUrl'] ?? "https://via.placeholder.com/150";
           });
         }
       },
@@ -91,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
+            // Sidebar: Dynamically display patient name, email & profile image
             UserAccountsDrawerHeader(
               accountName: Text(
                 userName,
@@ -99,19 +110,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 18,
                 ),
               ),
-              accountEmail: const Text(
-                "patient@test.com",
-                style: TextStyle(fontSize: 14),
+              accountEmail: Text(
+                userEmail,
+                style: const TextStyle(fontSize: 14),
               ),
               currentAccountPicture: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
-                child: const CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    "https://via.placeholder.com/150",
-                  ),
+                child: CircleAvatar(
+                  backgroundImage: NetworkImage(profileImageUrl),
                 ),
               ),
               decoration: BoxDecoration(

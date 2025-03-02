@@ -40,19 +40,21 @@ class AppUser {
 class Patient extends AppUser {
   String? phone;
   String? address;
-  String? familyId; // if patient is part of a family
-  List<String>? emergencyDoctorIds; // list of emergency contact doctor IDs
+  String? familyId; // If patient is part of a family
+  List<String>? emergencyDoctorIds; // List of emergency contact doctor IDs
+  List<Map<String, dynamic>>? medicalRecords; // List of medical records
 
   Patient({
     required String uid,
     required String email,
     String? name,
     String? profileImageUrl,
-    required UserRole role, // should be UserRole.patient
+    required UserRole role, // Should be UserRole.patient
     this.phone,
     this.address,
     this.familyId,
     this.emergencyDoctorIds,
+    this.medicalRecords,
   }) : super(
          uid: uid,
          email: email,
@@ -75,6 +77,10 @@ class Patient extends AppUser {
           data['emergencyDoctorIds'] != null
               ? List<String>.from(data['emergencyDoctorIds'])
               : null,
+      medicalRecords:
+          data['medicalRecords'] != null
+              ? List<Map<String, dynamic>>.from(data['medicalRecords'])
+              : [],
     );
   }
 
@@ -86,8 +92,30 @@ class Patient extends AppUser {
       'address': address,
       'familyId': familyId,
       'emergencyDoctorIds': emergencyDoctorIds,
+      'medicalRecords': medicalRecords,
     });
     return baseMap;
+  }
+
+  /// Adds a new medical record with a PDF URL.
+  void addMedicalRecord({
+    required String recordId,
+    required String date,
+    required String prescription,
+    String? ecgResult,
+    String? pdfUrl,
+  }) {
+    medicalRecords ??= [];
+
+    medicalRecords!.add({
+      'recordId': recordId,
+      'date': date,
+      'prescription': prescription,
+      'ecgResult': ecgResult ?? 'Not Available',
+      'pdf_url':
+          pdfUrl ??
+          'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', // Default PDF URL
+    });
   }
 }
 
@@ -100,7 +128,7 @@ class Doctor extends AppUser {
     required String email,
     String? name,
     String? profileImageUrl,
-    required UserRole role, // should be UserRole.doctor
+    required UserRole role, // Should be UserRole.doctor
     this.specialization,
   }) : super(
          uid: uid,
