@@ -17,6 +17,7 @@ import 'screens/patient/chat_screen.dart';
 import 'screens/patient/settings_screen.dart';
 import 'screens/patient/family_screen.dart';
 import 'screens/patient/not_found_screen.dart';
+import 'screens/patient/ecg_page.dart';
 
 // Doctor Screens
 import 'screens/doctor/home_screen.dart' as doctor;
@@ -76,6 +77,7 @@ class MyApp extends StatelessWidget {
         '/patient/chat': (context) => const ChatScreen(),
         '/patient/settings': (context) => const SettingsScreen(),
         '/patient/family': (context) => const FamilyScreen(),
+        '/patient/ecg': (context) => const EcgPage(),
 
         // Doctor routes
         '/doctor/home': (context) => const doctor.HomeScreen(),

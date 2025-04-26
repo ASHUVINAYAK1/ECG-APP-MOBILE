@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/app_scaffold.dart';
+import 'ecg_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -320,6 +321,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   Colors.blue.shade100,
                   Colors.blue.shade700,
                   () => Navigator.pushNamed(context, '/patient/appointment'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildQuickActionCard(
+                  context,
+                  Icons.monitor_heart,
+                  "ECG Monitor",
+                  Colors.green.shade100,
+                  Colors.green.shade700,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EcgPage()),
+                  ),
                 ),
               ],
             ),
